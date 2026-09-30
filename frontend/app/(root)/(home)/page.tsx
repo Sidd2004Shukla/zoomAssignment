@@ -5,7 +5,6 @@ import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import Image from "next/image";
 
 import { MeetingTypeList } from "@/components/meeting-type-list";
 import { useToast } from "@/components/ui/use-toast";

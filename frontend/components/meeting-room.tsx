@@ -154,7 +154,7 @@ export const MeetingRoom = ({ meeting }: MeetingRoomProps) => {
         zegoRef.current.destroy();
       }
     };
-  }, [isLoaded, user, meeting.id, roomId, layout, router, toast, refreshParticipants]);
+  }, [isLoaded, user, isHost, meeting.id, meeting.max_participants, roomId, layout, router, toast, refreshParticipants]);
 
   // Periodic participants refresh
   useEffect(() => {

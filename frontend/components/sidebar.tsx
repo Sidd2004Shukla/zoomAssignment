@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, History, Home, Tv, Video } from "lucide-react";
+import { CalendarDays, History, Home, Tv } from "lucide-react";
 
 const NAV_ITEMS = [
   {
