@@ -25,13 +25,27 @@ api_router.include_router(meetings_router)
 api_router.include_router(participants_router)
 
 
+from pathlib import Path
+from app.core.config import settings
+
+
+def init_db():
+    try:
+        if settings.database_url.startswith("sqlite") and engine.url.database:
+            Path(engine.url.database).parent.mkdir(parents=True, exist_ok=True)
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Warning: Failed to auto-create database tables: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    init_db()
     yield
 
 
 def create_app() -> FastAPI:
+    init_db()
     app = FastAPI(title="Zoom Assignment API", version="1.0.0", lifespan=lifespan)
     app.include_router(api_router)
     return app
