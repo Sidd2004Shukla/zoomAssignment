@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ReactDatePicker from "react-datepicker";
 
 import { MeetingModal } from "@/components/modals/meeting-modal";
@@ -20,13 +20,24 @@ type MeetingState =
   | "isInstantMeeting"
   | undefined;
 
-export const MeetingTypeList = () => {
+type MeetingTypeListProps = {
+  showCards?: boolean;
+  externalMeetingState?: MeetingState;
+  onExternalClose?: () => void;
+};
+
+export const MeetingTypeList = ({
+  showCards = true,
+  externalMeetingState,
+  onExternalClose,
+}: MeetingTypeListProps) => {
   const router = useRouter();
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
   const [meetingLink, setMeetingLink] = useState<string>();
   const [meetingState, setMeetingState] = useState<MeetingState>(undefined);
+
   const [values, setValues] = useState({
     dateTime: new Date(),
     description: "",
@@ -35,8 +46,19 @@ export const MeetingTypeList = () => {
 
   const { user } = useUser();
 
+  useEffect(() => {
+    if (externalMeetingState) {
+      setMeetingState(externalMeetingState);
+    }
+  }, [externalMeetingState]);
+
+  const closeMeetingModal = () => {
+    setMeetingState(undefined);
+    onExternalClose?.();
+  };
+
   const handleCreateMeeting = async () => {
-    if (!user || !user?.id) return;
+    if (!user || !user.id) return;
 
     try {
       setIsLoading(true);
@@ -57,9 +79,11 @@ export const MeetingTypeList = () => {
         settings: {},
       });
 
-      setMeetingLink(`${process.env.NEXT_PUBLIC_BASE_URL}/meeting/${meeting.id}`);
+      setMeetingLink(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/meeting/${meeting.id}`
+      );
 
-      if (!values?.description) {
+      if (!values.description) {
         router.push(`/meeting/${meeting.id}`);
       }
 
@@ -71,7 +95,10 @@ export const MeetingTypeList = () => {
 
       toast({
         title: "Failed to create meeting.",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
@@ -79,46 +106,74 @@ export const MeetingTypeList = () => {
     }
   };
 
-  if (!user || !user?.id) return <Loader />;
+  const handleJoinMeeting = () => {
+    if (!values.link) return;
+
+    const trimmed = values.link.trim();
+
+    if (
+      trimmed.startsWith("http://") ||
+      trimmed.startsWith("https://")
+    ) {
+      try {
+        const url = new URL(trimmed);
+        router.push(url.pathname + url.search);
+      } catch {
+        router.push(trimmed);
+      }
+    } else if (trimmed.startsWith("/")) {
+      router.push(trimmed);
+    } else {
+      router.push(`/meeting/${trimmed}`);
+    }
+  };
+
+  if (!user || !user.id) {
+    return <Loader />;
+  }
 
   return (
-    <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-      <HomeCard
-        img="/icons/add-meeting.svg"
-        title="New Meeting"
-        description="Start an instant meeting"
-        handleClick={() => setMeetingState("isInstantMeeting")}
-        className="bg-orange-1"
-      />
+    <>
+      {showCards && (
+        <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <HomeCard
+            img="/icons/add-meeting.svg"
+            title="New Meeting"
+            description="Start an instant meeting"
+            handleClick={() => setMeetingState("isInstantMeeting")}
+            className="bg-orange-1"
+          />
 
-      <HomeCard
-        img="/icons/schedule.svg"
-        title="Schedule Meeting"
-        description="Plan your meeting"
-        handleClick={() => setMeetingState("isScheduleMeeting")}
-        className="bg-blue-1"
-      />
+          <HomeCard
+            img="/icons/schedule.svg"
+            title="Schedule Meeting"
+            description="Plan your meeting"
+            handleClick={() => setMeetingState("isScheduleMeeting")}
+            className="bg-blue-1"
+          />
 
-      <HomeCard
-        img="/icons/recordings.svg"
-        title="View Recordings"
-        description="Check out your recordings"
-        handleClick={() => router.push("/recordings")}
-        className="bg-purple-1"
-      />
+          <HomeCard
+            img="/icons/recordings.svg"
+            title="View Recordings"
+            description="Check out your recordings"
+            handleClick={() => router.push("/recordings")}
+            className="bg-purple-1"
+          />
 
-      <HomeCard
-        img="/icons/join-meeting.svg"
-        title="Join Meeting"
-        description="Via invitation link"
-        handleClick={() => setMeetingState("isJoiningMeeting")}
-        className="bg-yellow-1"
-      />
+          <HomeCard
+            img="/icons/join-meeting.svg"
+            title="Join Meeting"
+            description="Via invitation link"
+            handleClick={() => setMeetingState("isJoiningMeeting")}
+            className="bg-yellow-1"
+          />
+        </section>
+      )}
 
       {!meetingLink ? (
         <MeetingModal
           isOpen={meetingState === "isScheduleMeeting"}
-          onClose={() => setMeetingState(undefined)}
+          onClose={closeMeetingModal}
           title="Create meeting"
           handleClick={handleCreateMeeting}
           isLoading={isLoading}
@@ -126,12 +181,16 @@ export const MeetingTypeList = () => {
           <div className="flex flex-col gap-2.5">
             <label className="text-normal text-base leading-[22px] text-sky-2">
               Add a description
+
               <Textarea
                 rows={6}
                 placeholder="Add a description..."
                 className="mt-2 resize-none border-none bg-dark-3"
                 onChange={(e) => {
-                  setValues({ ...values, description: e.target.value });
+                  setValues({
+                    ...values,
+                    description: e.target.value,
+                  });
                 }}
               />
             </label>
@@ -140,14 +199,15 @@ export const MeetingTypeList = () => {
           <div className="flex w-full flex-col gap-2.5">
             <label className="text-normal flex flex-col text-base leading-[22px] text-sky-2">
               Select Date and Time
+
               <ReactDatePicker
                 selected={values.dateTime}
-                onChange={(date) =>
+                onChange={(date) => {
                   setValues({
                     ...values,
                     dateTime: date!,
-                  })
-                }
+                  });
+                }}
                 showTimeSelect
                 timeFormat="HH:mm"
                 timeIntervals={15}
@@ -161,14 +221,16 @@ export const MeetingTypeList = () => {
       ) : (
         <MeetingModal
           isOpen={meetingState === "isScheduleMeeting"}
-          onClose={() => setMeetingState(undefined)}
+          onClose={closeMeetingModal}
           title="Meeting created"
           className="text-center"
           buttonText="Copy meeting link"
           handleClick={() => {
             navigator.clipboard.writeText(meetingLink);
 
-            toast({ title: "Link copied." });
+            toast({
+              title: "Link copied.",
+            });
           }}
           image="/icons/checked.svg"
           buttonIcon="/icons/copy.svg"
@@ -178,44 +240,35 @@ export const MeetingTypeList = () => {
 
       <MeetingModal
         isOpen={meetingState === "isInstantMeeting"}
-        onClose={() => setMeetingState(undefined)}
+        onClose={closeMeetingModal}
         title="Start an instant meeting"
         className="text-center"
         buttonText="Start Meeting"
-          handleClick={handleCreateMeeting}
+        handleClick={handleCreateMeeting}
         isLoading={isLoading}
       />
 
       <MeetingModal
         isOpen={meetingState === "isJoiningMeeting"}
-        onClose={() => setMeetingState(undefined)}
+        onClose={closeMeetingModal}
         title="Type the link here"
         className="text-center"
         buttonText="Join Meeting"
-        handleClick={() => {
-          if (!values.link) return;
-          const trimmed = values.link.trim();
-          if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-            try {
-              const url = new URL(trimmed);
-              router.push(url.pathname + url.search);
-            } catch {
-              router.push(trimmed);
-            }
-          } else if (trimmed.startsWith("/")) {
-            router.push(trimmed);
-          } else {
-            router.push(`/meeting/${trimmed}`);
-          }
-        }}
+        handleClick={handleJoinMeeting}
         isLoading={isLoading}
       >
         <Input
           placeholder="Meeting link or ID"
-          onChange={(e) => setValues({ ...values, link: e.target.value })}
+          value={values.link}
+          onChange={(e) => {
+            setValues({
+              ...values,
+              link: e.target.value,
+            });
+          }}
           className="border-none bg-dark-3"
         />
       </MeetingModal>
-    </section>
+    </>
   );
 };

@@ -1,47 +1,29 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-import { SIDEBAR_LINKS } from "@/constants";
-import { cn } from "@/lib/utils";
+import { Home } from "lucide-react";
 
 export const Sidebar = () => {
   const pathname = usePathname();
 
+  const isActive = pathname === "/";
+
   return (
-    <section className="sticky left-0 top-0 flex h-screen w-fit flex-col justify-between bg-dark-1 p-6 pt-28 text-white max-sm:hidden lg:w-[264px]">
-      <div className="flex flex-1 flex-col gap-6">
-        {SIDEBAR_LINKS.map((item) => {
-          const isActive =
-            pathname === item.route || pathname.startsWith(`${item.route}/`);
-
-          return (
-            <Link
-              key={item.route}
-              href={item.route}
-              className={cn(
-                "flex items-center justify-start gap-4 rounded-lg p-4",
-                {
-                  "bg-blue-1": isActive,
-                }
-              )}
-            >
-              <Image
-                src={item.imgUrl}
-                alt={item.label}
-                width={24}
-                height={24}
-              />
-
-              <p className="text-lg font-semibold max-lg:hidden">
-                {item.label}
-              </p>
-            </Link>
-          );
-        })}
+    <aside className="sticky left-0 top-[105px] hidden h-[calc(100vh-105px)] w-[220px] shrink-0 border-r border-[#e5e7eb] bg-white lg:block">
+      <div className="p-5">
+        <Link
+          href="/"
+          className={`flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-medium transition ${
+            isActive
+              ? "bg-[#eaf2ff] text-[#2d6cdf]"
+              : "text-[#5d6275] hover:bg-[#f5f7fa]"
+          }`}
+        >
+          <Home className="h-5 w-5" strokeWidth={2} />
+          <span>Home</span>
+        </Link>
       </div>
-    </section>
+    </aside>
   );
 };

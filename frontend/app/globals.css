@@ -30,6 +30,7 @@
   from {
     height: 0;
   }
+
   to {
     height: var(--radix-accordion-content-height);
   }
@@ -39,6 +40,7 @@
   from {
     height: var(--radix-accordion-content-height);
   }
+
   to {
     height: 0;
   }
@@ -51,7 +53,6 @@
     box-sizing: border-box;
   }
 
-  /* ======== stream css overrides ======== */
   .str-video__call-stats {
     max-width: 500px;
     position: relative;
@@ -90,10 +91,19 @@
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
   }
+
   .glassmorphism2 {
     background: rgba(18, 17, 17, 0.25);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+  }
+
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+
+  .flex-between {
+    @apply flex items-center justify-between;
   }
 }
 
@@ -109,18 +119,6 @@
   }
 }
 
-@layer utilities {
-  .flex-center {
-    @apply flex items-center justify-center;
-  }
-
-  .flex-between {
-    @apply flex items-center justify-between;
-  }
-}
-
-/* ==== clerk class override ===== */
-
 .cl-userButtonPopoverActionButtonIcon {
   color: white;
 }
@@ -128,6 +126,7 @@
 .cl-logoBox {
   height: 40px;
 }
+
 .cl-dividerLine {
   background: #252a41;
   height: 2px;
@@ -140,6 +139,7 @@
 .cl-internal-wkkub3 {
   color: white;
 }
+
 .cl-userButtonPopoverActionButton {
   color: white;
 }
@@ -147,8 +147,6 @@
 .cl-providerIcon__github {
   filter: invert(1);
 }
-
-/* animation */
 
 .show-block {
   width: 100%;
