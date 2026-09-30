@@ -189,7 +189,7 @@ export const MeetingTypeList = ({
   return (
     <>
       {showCards && (
-        <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-1 gap-5 md:grid-cols-3">
           <HomeCard
             img="/icons/add-meeting.svg"
             title="New Meeting"
@@ -204,14 +204,6 @@ export const MeetingTypeList = ({
             description="Plan your meeting"
             handleClick={() => setMeetingState("isScheduleMeeting")}
             className="bg-blue-1"
-          />
-
-          <HomeCard
-            img="/icons/recordings.svg"
-            title="View Recordings"
-            description="Check out your recordings"
-            handleClick={() => router.push("/recordings")}
-            className="bg-purple-1"
           />
 
           <HomeCard

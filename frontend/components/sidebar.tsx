@@ -21,11 +21,6 @@ const NAV_ITEMS = [
     icon: History,
   },
   {
-    label: "Recordings",
-    route: "/recordings",
-    icon: Video,
-  },
-  {
     label: "Personal Room",
     route: "/personal-room",
     icon: Tv,

@@ -22,13 +22,9 @@ export const useGetCalls = () => {
     loadCalls();
   }, [loadCalls]);
 
-  const now = new Date();
-
   const endedCalls = calls
-    ?.filter(({ scheduled_start_at, ended_at, status }) => {
-      if (status === "ENDED" || status === "CANCELED") return true;
-      if (ended_at) return true;
-      return scheduled_start_at && new Date(scheduled_start_at) < now;
+    ?.filter(({ ended_at, status }) => {
+      return status === "ENDED" || status === "CANCELED" || Boolean(ended_at);
     })
     .sort((a, b) => {
       const timeA = new Date(a.ended_at || a.scheduled_start_at || a.created_at).getTime();
@@ -37,13 +33,14 @@ export const useGetCalls = () => {
     });
 
   const upcomingCalls = calls
-    ?.filter(({ scheduled_start_at, ended_at, status }) => {
+    ?.filter(({ ended_at, status, settings }) => {
       if (status === "ENDED" || status === "CANCELED" || ended_at) return false;
-      return scheduled_start_at && new Date(scheduled_start_at) > now;
+      if (settings && (settings as any).personal) return false;
+      return status === "SCHEDULED" || status === "ACTIVE";
     })
     .sort((a, b) => {
-      const timeA = new Date(a.scheduled_start_at!).getTime();
-      const timeB = new Date(b.scheduled_start_at!).getTime();
+      const timeA = new Date(a.scheduled_start_at || a.created_at).getTime();
+      const timeB = new Date(b.scheduled_start_at || b.created_at).getTime();
       return timeA - timeB;
     });
 

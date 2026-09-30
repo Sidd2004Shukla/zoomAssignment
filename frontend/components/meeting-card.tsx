@@ -1,91 +1,94 @@
 "use client";
 
-import Image from "next/image";
-
+import { CalendarDays, Copy, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { avatarImages } from "@/constants";
-import { cn } from "@/lib/utils";
 
 type MeetingCardProps = {
   title: string;
   date: string;
-  icon: string;
+  meetingCode?: string;
   isPreviousMeeting?: boolean;
-  buttonIcon1?: string;
   buttonText?: string;
   handleClick: () => void;
   link: string;
 };
 
 export const MeetingCard = ({
-  icon,
   title,
   date,
+  meetingCode,
   isPreviousMeeting,
-  buttonIcon1,
+  buttonText = "Join",
   handleClick,
   link,
-  buttonText,
 }: MeetingCardProps) => {
   const { toast } = useToast();
 
   return (
-    <section className="flex min-h-[258px] w-full flex-col justify-between rounded-[14px] bg-dark-1 px-5 py-8 xl:max-w-[568px]">
-      <article className="flex flex-col gap-5">
-        <Image src={icon} alt="upcoming" width={28} height={28} />
-        <div className="flex justify-between">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-bold">{title}</h1>
-            <p className="text-base font-normal">{date}</p>
-          </div>
-        </div>
-      </article>
-      <article className={cn("relative flex justify-center", {})}>
-        <div className="relative flex w-full max-sm:hidden">
-          {avatarImages.map((img, index) => (
-            <Image
-              key={index}
-              src={img}
-              alt="attendees"
-              width={40}
-              height={40}
-              className={cn("rounded-full", { absolute: index > 0 })}
-              style={{ top: 0, left: index * 28 }}
-            />
-          ))}
-          <div className="flex-center absolute left-[136px] size-10 rounded-full border-[5px] border-dark-3 bg-dark-4">
-            +5
-          </div>
-        </div>
-        {!isPreviousMeeting && (
-          <div className="flex gap-2">
-            <Button onClick={handleClick} className="rounded bg-blue-1 px-6">
-              {buttonIcon1 && (
-                <Image src={buttonIcon1} alt="feature" width={20} height={20} />
+    <section className="flex flex-col justify-between rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm transition hover:shadow-md">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#eaf2ff] text-[#2d6cdf]">
+              {isPreviousMeeting ? (
+                <CalendarDays className="h-5 w-5" />
+              ) : (
+                <Video className="h-5 w-5" />
               )}
-              &nbsp; {buttonText}
-            </Button>
-            <Button
-              onClick={() => {
-                navigator.clipboard.writeText(link);
-                toast({
-                  title: "Link copied.",
-                });
-              }}
-              className="bg-dark-4 px-6"
-            >
-              <Image
-                src="/icons/copy.svg"
-                alt="feature"
-                width={20}
-                height={20}
-              />
-              &nbsp; Copy Link
-            </Button>
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-[#111827]">{title}</h1>
+              <p className="text-xs text-[#5f6675]">{date}</p>
+            </div>
+          </div>
+
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              isPreviousMeeting
+                ? "bg-[#f3f4f6] text-[#4b5563]"
+                : "bg-[#eaf2ff] text-[#2d6cdf]"
+            }`}
+          >
+            {isPreviousMeeting ? "Ended" : "Upcoming"}
+          </span>
+        </div>
+
+        {meetingCode && (
+          <div className="flex items-center gap-2 rounded-lg bg-[#f8fafc] px-3 py-2 text-xs text-[#5f6675]">
+            <span>Meeting Code:</span>
+            <span className="font-mono font-semibold text-[#111827]">
+              {meetingCode}
+            </span>
           </div>
         )}
-      </article>
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-[#f1f5f9] pt-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            navigator.clipboard.writeText(link);
+            toast({
+              title: "Link copied to clipboard.",
+              description: link,
+            });
+          }}
+          className="border-[#d7dce5] bg-white text-xs font-semibold text-[#26344d] hover:bg-[#f6f8fa]"
+        >
+          <Copy className="mr-1.5 h-3.5 w-3.5" />
+          Copy Link
+        </Button>
+
+        <Button
+          size="sm"
+          onClick={handleClick}
+          className="bg-[#2d6cdf] text-xs font-semibold text-white hover:bg-[#245bc2]"
+        >
+          {isPreviousMeeting ? "Join Again" : buttonText}
+        </Button>
+      </div>
     </section>
   );
 };

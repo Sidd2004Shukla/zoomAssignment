@@ -3,10 +3,12 @@
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
+import { useEffect } from "react";
 import { Loader } from "@/components/loader";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { createMeeting, getMeetings } from "@/lib/api/meetings";
+import { createMeeting } from "@/lib/api/meetings";
+import { getPersonalMeetingCode } from "@/lib/utils";
 
 type TableProps = {
   title: string;
@@ -32,36 +34,56 @@ const PersonalRoomPage = () => {
   const displayName =
     user?.fullName || user?.username || user?.firstName || "Personal";
 
-  if (!user || !user?.id || !isLoaded) return <Loader />;
-
-  const meetingCode = user.id;
+  const pmiCode = user?.id ? getPersonalMeetingCode(user.id) : "";
   const origin =
     typeof window !== "undefined"
       ? window.location.origin
       : process.env.NEXT_PUBLIC_BASE_URL || "";
-  const meetingLink = `${origin}/meeting/${meetingCode}?personal=true`;
+  const meetingLink = `${origin}/meeting/${pmiCode}?personal=true`;
+
+  useEffect(() => {
+    if (!user || !user.id || !isLoaded || !pmiCode) return;
+
+    const initPersonalRoom = async () => {
+      try {
+        await createMeeting({
+          host_user_id: user.id,
+          host_name: displayName,
+          title: `${displayName}'s Personal Meeting Room`,
+          description: `${displayName}'s Personal Meeting Room`,
+          meeting_code: pmiCode,
+          status: "ACTIVE",
+          scheduled_start_at: new Date().toISOString(),
+          settings: { personal: true, personal_user_id: user.id },
+        });
+      } catch {
+        // already exists or initialized
+      }
+    };
+
+    initPersonalRoom();
+  }, [user, isLoaded, displayName, pmiCode]);
+
+  if (!user || !user?.id || !isLoaded) return <Loader />;
 
   const startRoom = async () => {
-    const existingMeetings = await getMeetings();
-    const existing = existingMeetings.find(
-      (meeting) => meeting.meeting_code === meetingCode
-    );
-
-    if (!existing) {
+    try {
       await createMeeting({
         host_user_id: user.id,
         host_name: displayName,
-        title: `${displayName}'s Meeting Room`,
-        description: `${displayName}'s Meeting Room`,
-        meeting_code: meetingCode,
+        title: `${displayName}'s Personal Meeting Room`,
+        description: `${displayName}'s Personal Meeting Room`,
+        meeting_code: pmiCode,
         status: "ACTIVE",
         started_at: new Date().toISOString(),
         scheduled_start_at: new Date().toISOString(),
-        settings: { personal: true },
+        settings: { personal: true, personal_user_id: user.id },
       });
+    } catch {
+      // ignore
     }
 
-    router.push(`/meeting/${meetingCode}?personal=true`);
+    router.push(`/meeting/${pmiCode}?personal=true`);
   };
 
   return (
@@ -69,8 +91,11 @@ const PersonalRoomPage = () => {
       <h1 className="text-3xl font-bold">Personal Meeting Room</h1>
 
       <div className="flex w-full flex-col gap-4 xl:max-w-[900px]">
-        <Table title="Meeting ID" description={meetingCode} />
-        <Table title="Topic" description={`${displayName}'s Meeting Room`} />
+        <Table title="Meeting ID" description={pmiCode} />
+        <Table
+          title="Topic"
+          description={`${displayName}'s Personal Meeting Room`}
+        />
         <Table title="Invite link" description={meetingLink} />
       </div>
 

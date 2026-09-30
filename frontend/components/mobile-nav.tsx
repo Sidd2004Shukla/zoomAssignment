@@ -31,16 +31,10 @@ export const MobileNav = () => {
 
         <SheetContent side="left" className="border-none bg-dark-1">
           <SheetClose asChild>
-            <Link href="/" className="flex items-center gap-1">
-              <Image
-                src="/icons/logo.svg"
-                alt="Yoom logo"
-                width={32}
-                height={32}
-                className="max-sm:size-10"
-              />
-
-              <p className="text-[26px] font-extrabold text-white">Yoom</p>
+            <Link href="/" className="flex items-center gap-2">
+              <span className="text-[32px] font-semibold tracking-[-2px] text-[#2d6cdf]">
+                zoom
+              </span>
             </Link>
           </SheetClose>
 

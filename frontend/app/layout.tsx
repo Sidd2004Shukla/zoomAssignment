@@ -23,19 +23,18 @@ export const metadata: Metadata = siteConfig;
 const AppLayout = ({ children }: Readonly<PropsWithChildren>) => {
   return (
     <html lang="en">
-      <body className={cn("bg-dark-2", inter.className)}>
+      <body className={cn("bg-white", inter.className)}>
         <ClerkProvider
           appearance={{
             layout: {
-              logoImageUrl: "/icons/yoom-logo.svg",
               socialButtonsVariant: "iconButton",
             },
             variables: {
-              colorText: "#FFF",
-              colorPrimary: "#0E78F9",
-              colorBackground: "#1C1F2E",
-              colorInputBackground: "#252A41",
-              colorInputText: "#FFF",
+              colorText: "#111827",
+              colorPrimary: "#2d6cdf",
+              colorBackground: "#ffffff",
+              colorInputBackground: "#f8fafc",
+              colorInputText: "#111827",
             },
           }}
         >

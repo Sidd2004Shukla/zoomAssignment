@@ -69,6 +69,18 @@ def _find_meeting(db: Session, meeting_id: str) -> Meeting:
         if meeting:
             return meeting
 
+    # 5. Check personal meeting by host auth_provider_user_id or id
+    host_user = db.scalar(select(User).where((User.auth_provider_user_id == raw_id) | (User.id == raw_id)))
+    if host_user:
+        personal_meeting = db.scalar(
+            select(Meeting).where(
+                Meeting.host_user_id == host_user.id,
+                Meeting.settings.contains({"personal": True}),
+            )
+        )
+        if personal_meeting:
+            return personal_meeting
+
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail="Meeting not found",
@@ -109,6 +121,36 @@ def create_meeting(
     existing = db.scalar(select(Meeting).where(Meeting.meeting_code == meeting_code))
     if existing:
         if payload.settings and payload.settings.get("personal"):
+            existing.status = MeetingStatus.ACTIVE
+            existing.started_at = datetime.now(timezone.utc)
+            existing.ended_at = None
+            if payload.title:
+                existing.title = payload.title
+            
+            # Ensure host participant is active
+            hp = db.scalar(
+                select(MeetingParticipant).where(
+                    MeetingParticipant.meeting_id == existing.id,
+                    MeetingParticipant.user_id == host.id,
+                )
+            )
+            if hp:
+                hp.status = ParticipantStatus.JOINED
+                hp.joined_at = datetime.now(timezone.utc)
+                if host_name:
+                    hp.display_name = host_name
+            else:
+                hp = MeetingParticipant(
+                    meeting_id=existing.id,
+                    user_id=host.id,
+                    display_name=host_name or host.name or host.auth_provider_user_id,
+                    role=ParticipantRole.HOST,
+                    status=ParticipantStatus.JOINED,
+                    joined_at=datetime.now(timezone.utc),
+                )
+                db.add(hp)
+            db.commit()
+            db.refresh(existing)
             return existing
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

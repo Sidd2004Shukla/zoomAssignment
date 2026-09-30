@@ -15,11 +15,6 @@ export const SIDEBAR_LINKS = [
     imgUrl: "/icons/previous.svg",
   },
   {
-    label: "Recordings",
-    route: "/recordings",
-    imgUrl: "/icons/video.svg",
-  },
-  {
     label: "Personal Room",
     route: "/personal-room",
     imgUrl: "/icons/add-personal.svg",

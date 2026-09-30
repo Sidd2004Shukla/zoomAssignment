@@ -267,25 +267,54 @@ const HomePage = () => {
               </div>
 
               <div className="rounded-xl border border-[#e7eaf0] bg-white p-6 shadow-[0_4px_18px_rgba(0,0,0,0.06)]">
-                <h2 className="text-[23px] font-semibold text-[#111827]">
-                  Meetings
-                </h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-[23px] font-semibold text-[#111827]">
+                    Meetings
+                  </h2>
+                  <Link
+                    href="/upcoming"
+                    className="text-xs font-semibold text-[#2d6cdf] hover:underline"
+                  >
+                    View all
+                  </Link>
+                </div>
 
-                <div className="mt-5 rounded-xl bg-[#f6f8fa] px-4 py-3">
+                <div className="mt-5 rounded-xl bg-[#f6f8fa] p-4">
                   {nextMeeting ? (
-                    <div>
-                      <p className="text-sm font-semibold text-[#202938]">
-                        Upcoming meeting
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <span className="rounded-full bg-[#eaf2ff] px-2.5 py-0.5 text-[11px] font-semibold text-[#2d6cdf]">
+                          Upcoming
+                        </span>
+                        {meetingTime && (
+                          <span className="text-xs text-[#697386]">
+                            {meetingTime}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="mt-1 font-semibold text-[#111827]">
+                        {nextMeeting.title || "Scheduled meeting"}
                       </p>
 
-                      {meetingTime && (
-                        <p className="mt-1 text-sm text-[#697386]">
-                          Starts at {meetingTime}
-                        </p>
-                      )}
+                      <div className="mt-2 flex items-center justify-between gap-2 border-t border-[#edf0f4] pt-3">
+                        <span className="font-mono text-xs text-[#697386]">
+                          {nextMeeting.meeting_code || nextMeeting.id}
+                        </span>
+                        <button
+                          onClick={() =>
+                            router.push(
+                              `/meeting/${nextMeeting.meeting_code || nextMeeting.id}`
+                            )
+                          }
+                          className="rounded-lg bg-[#2d6cdf] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#245bc2]"
+                        >
+                          Join
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-sm font-semibold text-[#202938]">
+                    <p className="py-2 text-center text-sm font-medium text-[#697386]">
                       No Upcoming Meetings
                     </p>
                   )}
