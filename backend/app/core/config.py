@@ -10,9 +10,17 @@ load_dotenv(backend_root / ".env")
 
 
 def _default_database_url() -> str:
-    data_dir = backend_root / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return f"sqlite:///{(data_dir / 'app.db').as_posix()}"
+    try:
+        data_dir = backend_root / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        test_file = data_dir / ".write_test"
+        test_file.touch()
+        test_file.unlink()
+        return f"sqlite:///{(data_dir / 'app.db').as_posix()}"
+    except (OSError, PermissionError):
+        tmp_dir = Path("/tmp") / "zoom_Assignment"
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        return f"sqlite:///{(tmp_dir / 'app.db').as_posix()}"
 
 
 @dataclass(frozen=True)

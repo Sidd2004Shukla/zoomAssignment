@@ -3,10 +3,51 @@ export type ApiErrorPayload = {
   message?: string;
 };
 
-const DEFAULT_API_BASE_URL = "http://localhost:8000";
+/**
+ * Resolves the API base URL depending on the execution context:
+ * - Server-side functions (Node.js runtime): reads the bound variable `process.env.BACKEND_URL`
+ *   injected by Vercel for the service binding, falling back to NEXT_PUBLIC_API_BASE_URL or localhost.
+ * - Client-side browser: uses NEXT_PUBLIC_API_BASE_URL if explicitly configured, otherwise empty string
+ *   so requests are relative and routed through the Vercel rewrite rule `/api/(.*)` -> `backend`.
+ */
+export function getApiBaseUrl(): string {
+  if (typeof window === "undefined") {
+    return (
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      "http://localhost:8000"
+    );
+  }
+  return process.env.NEXT_PUBLIC_API_BASE_URL || "";
+}
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL;
+/**
+ * Resolves the full URL for an API endpoint path.
+ * In server-side functions, it uses `new URL(path, process.env.BACKEND_URL)` to call the internal service binding.
+ */
+export function resolveApiUrl(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  if (typeof window === "undefined") {
+    const backendBase =
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      "http://localhost:8000";
+
+    const base = backendBase.endsWith("/") ? backendBase : `${backendBase}/`;
+    return new URL(normalizedPath.replace(/^\//, ""), base).toString();
+  }
+
+  const clientBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (clientBase) {
+    const base = clientBase.endsWith("/") ? clientBase : `${clientBase}/`;
+    return new URL(normalizedPath.replace(/^\//, ""), base).toString();
+  }
+
+  return normalizedPath;
+}
+
+export const API_BASE_URL = getApiBaseUrl();
 
 export class ApiError extends Error {
   status: number;
@@ -59,7 +100,9 @@ export async function apiRequest<T>(
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const requestUrl = resolveApiUrl(path);
+
+  const response = await fetch(requestUrl, {
     ...init,
     headers: {
       ...customHeaders,

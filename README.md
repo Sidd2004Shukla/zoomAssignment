@@ -247,3 +247,15 @@ Expected output:
 
 === ALL 13 BACKEND ENDPOINTS & STAGES VERIFIED PERFECTLY! ===
 ```
+
+### 5. Running with Vercel Services Locally
+To run both the Next.js frontend and FastAPI backend together with service bindings and unified routing:
+```bash
+# Install Vercel CLI globally if not already installed
+npm install -g vercel
+
+# Run all services together locally
+vercel dev
+```
+`vercel dev` starts both services, injects the `BACKEND_URL` binding variable into the frontend functions, and routes all `/api/(.*)` requests to the backend while serving the Next.js app on `/(.*)`.
+

@@ -4,6 +4,9 @@ export {};
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
+      // vercel service binding internal backend url
+      BACKEND_URL?: string;
+
       // backend api url
       NEXT_PUBLIC_API_BASE_URL: string;
 
