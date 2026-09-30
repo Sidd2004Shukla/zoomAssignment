@@ -29,15 +29,50 @@ router = APIRouter(prefix="/meetings", tags=["meetings"])
 
 
 def _find_meeting(db: Session, meeting_id: str) -> Meeting:
-    meeting = db.get(Meeting, meeting_id)
-    if not meeting:
-        meeting = db.scalar(select(Meeting).where(Meeting.meeting_code == meeting_id))
-    if not meeting:
+    raw_id = (meeting_id or "").strip()
+    if not raw_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Meeting not found",
         )
-    return meeting
+
+    # 1. Exact match on id
+    meeting = db.get(Meeting, raw_id)
+    if meeting:
+        return meeting
+
+    # 2. Exact match on meeting_code
+    meeting = db.scalar(select(Meeting).where(Meeting.meeting_code == raw_id))
+    if meeting:
+        return meeting
+
+    # 3. Match without hyphens
+    cleaned_id = raw_id.replace("-", "").strip()
+    if cleaned_id:
+        meeting = db.scalar(
+            select(Meeting).where(
+                (Meeting.meeting_code == cleaned_id)
+                | (Meeting.id == cleaned_id)
+            )
+        )
+        if meeting:
+            return meeting
+
+    # 4. Prefix match (if user typed partial code / first 6+ characters)
+    if len(raw_id) >= 6:
+        meeting = db.scalar(
+            select(Meeting).where(
+                Meeting.meeting_code.startswith(raw_id)
+                | Meeting.id.startswith(raw_id)
+            )
+        )
+        if meeting:
+            return meeting
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Meeting not found",
+    )
 
 
 @router.post("", response_model=MeetingRead, status_code=status.HTTP_201_CREATED)
@@ -64,6 +99,11 @@ def create_meeting(
         db.add(host)
         db.flush()
 
+    host_name = payload.host_name
+    if host_name and not host.name and not host_name.startswith("user_"):
+        host.name = host_name
+        db.add(host)
+
     meeting_code = payload.meeting_code or str(uuid4())
 
     existing = db.scalar(select(Meeting).where(Meeting.meeting_code == meeting_code))
@@ -76,6 +116,7 @@ def create_meeting(
         )
 
     meeting_dict = payload.model_dump()
+    meeting_dict.pop("host_name", None)
     meeting_dict["host_user_id"] = host.id
     meeting_dict["meeting_code"] = meeting_code
 
@@ -83,10 +124,11 @@ def create_meeting(
     db.add(meeting)
     db.flush()
 
+    host_display_name = host_name or host.name or host.auth_provider_user_id
     host_participant = MeetingParticipant(
         meeting_id=meeting.id,
         user_id=host.id,
-        display_name=host.name or host.auth_provider_user_id,
+        display_name=host_display_name,
         role=ParticipantRole.HOST,
         status=ParticipantStatus.JOINED,
         joined_at=datetime.now(timezone.utc),
@@ -190,6 +232,11 @@ def join_meeting(
         participant.status = ParticipantStatus.JOINED
         participant.joined_at = now
         participant.is_removed = False
+        if payload and payload.display_name and not payload.display_name.startswith("user_"):
+            participant.display_name = payload.display_name
+        if current_user and payload and payload.display_name and not current_user.name and not payload.display_name.startswith("user_"):
+            current_user.name = payload.display_name
+            db.add(current_user)
     else:
         role = ParticipantRole.HOST if (current_user and current_user.id == meeting.host_user_id) else ParticipantRole.PARTICIPANT
         display_name = (
@@ -197,6 +244,10 @@ def join_meeting(
             or (current_user and (current_user.name or current_user.auth_provider_user_id))
             or "Guest"
         )
+        if current_user and payload and payload.display_name and not current_user.name and not payload.display_name.startswith("user_"):
+            current_user.name = payload.display_name
+            db.add(current_user)
+
         participant = MeetingParticipant(
             meeting_id=meeting.id,
             user_id=current_user.id if current_user else None,

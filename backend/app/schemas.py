@@ -55,6 +55,7 @@ class UserRead(UserCreate):
 
 class MeetingCreate(BaseModel):
     host_user_id: str
+    host_name: str | None = None
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
     meeting_code: str | None = Field(default=None, max_length=128)

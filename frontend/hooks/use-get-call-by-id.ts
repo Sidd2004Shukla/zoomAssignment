@@ -8,11 +8,17 @@ export const useGetCallById = (id: string | string[]) => {
   const [isCallLoading, setIsCallLoading] = useState(true);
 
   useEffect(() => {
+    const rawId = (Array.isArray(id) ? id[0] : id || "").trim();
+    if (!rawId) {
+      setIsCallLoading(false);
+      return;
+    }
+
     const loadCall = async () => {
       try {
-        setCall(await getMeeting(Array.isArray(id) ? id[0] : id));
+        setCall(await getMeeting(rawId));
       } catch (error) {
-        console.error(error);
+        console.error("Failed to load call:", error);
       } finally {
         setIsCallLoading(false);
       }

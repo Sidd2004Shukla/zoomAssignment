@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { createMeeting as createBackendMeeting } from "@/lib/api/meetings";
 
+import { generateMeetingCode } from "@/lib/utils";
+
 import { HomeCard } from "./home-card";
 import { Loader } from "./loader";
 
@@ -54,6 +56,8 @@ export const MeetingTypeList = ({
 
   const closeMeetingModal = () => {
     setMeetingState(undefined);
+    setMeetingLink(undefined);
+    setValues((prev) => ({ ...prev, description: "", link: "" }));
     onExternalClose?.();
   };
 
@@ -63,6 +67,40 @@ export const MeetingTypeList = ({
     try {
       setIsLoading(true);
 
+      const hostName =
+        user.fullName ||
+        user.firstName ||
+        user.username ||
+        undefined;
+
+      const meetingCode = generateMeetingCode();
+      const origin =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_BASE_URL || "";
+
+      if (meetingState === "isInstantMeeting") {
+        const meeting = await createBackendMeeting({
+          host_user_id: user.id,
+          host_name: hostName,
+          title: "Instant meeting",
+          description: "Instant meeting",
+          meeting_code: meetingCode,
+          status: "ACTIVE",
+          started_at: new Date().toISOString(),
+          scheduled_start_at: new Date().toISOString(),
+          settings: {},
+        });
+
+        toast({
+          title: "Instant meeting started",
+        });
+
+        router.push(`/meeting/${meeting.meeting_code || meeting.id}`);
+        return;
+      }
+
+      // Scheduled meeting flow
       if (!values.dateTime) {
         return toast({
           title: "Please select a date and time.",
@@ -72,23 +110,20 @@ export const MeetingTypeList = ({
 
       const meeting = await createBackendMeeting({
         host_user_id: user.id,
-        title: values.description || "Instant meeting",
-        description: values.description || "Instant meeting",
-        meeting_code: crypto.randomUUID(),
+        host_name: hostName,
+        title: values.description || "Scheduled meeting",
+        description: values.description || "Scheduled meeting",
+        meeting_code: meetingCode,
+        status: "SCHEDULED",
         scheduled_start_at: values.dateTime.toISOString(),
         settings: {},
       });
 
-      setMeetingLink(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/meeting/${meeting.id}`
-      );
-
-      if (!values.description) {
-        router.push(`/meeting/${meeting.id}`);
-      }
+      const fullLink = `${origin}/meeting/${meeting.meeting_code || meeting.id}`;
+      setMeetingLink(fullLink);
 
       toast({
-        title: "Meeting created.",
+        title: "Meeting scheduled successfully.",
       });
     } catch (error) {
       console.error("CREATE_MEETING: ", error);
@@ -109,23 +144,42 @@ export const MeetingTypeList = ({
   const handleJoinMeeting = () => {
     if (!values.link) return;
 
-    const trimmed = values.link.trim();
+    let input = values.link.trim();
+    if (!input) return;
+
+    input = input.replace(/\/+$/, "");
 
     if (
-      trimmed.startsWith("http://") ||
-      trimmed.startsWith("https://")
+      !input.startsWith("http://") &&
+      !input.startsWith("https://") &&
+      (input.includes("localhost") ||
+        input.includes(".vercel.app") ||
+        input.includes("/meeting/"))
     ) {
-      try {
-        const url = new URL(trimmed);
-        router.push(url.pathname + url.search);
-      } catch {
-        router.push(trimmed);
-      }
-    } else if (trimmed.startsWith("/")) {
-      router.push(trimmed);
-    } else {
-      router.push(`/meeting/${trimmed}`);
+      input = `https://${input}`;
     }
+
+    if (input.startsWith("http://") || input.startsWith("https://")) {
+      try {
+        const url = new URL(input);
+        const match = url.pathname.match(/\/meeting\/([^/?#]+)/);
+        if (match && match[1]) {
+          router.push(`/meeting/${match[1]}`);
+          return;
+        }
+        router.push(url.pathname + url.search);
+        return;
+      } catch {
+        // ignore and fallback
+      }
+    }
+
+    if (input.startsWith("/meeting/")) {
+      router.push(input);
+      return;
+    }
+
+    router.push(`/meeting/${encodeURIComponent(input)}`);
   };
 
   if (!user || !user.id) {

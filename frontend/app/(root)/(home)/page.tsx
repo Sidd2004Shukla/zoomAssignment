@@ -1,11 +1,14 @@
 "use client";
 
-import { CalendarDays, Plus, Video } from "lucide-react";
+import { CalendarDays, History, Plus, Video } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
 
 import { MeetingTypeList } from "@/components/meeting-type-list";
+import { useToast } from "@/components/ui/use-toast";
 import { useGetCalls } from "@/hooks/use-get-calls";
 
 type MeetingState =
@@ -15,8 +18,10 @@ type MeetingState =
   | undefined;
 
 const HomePage = () => {
+  const router = useRouter();
+  const { toast } = useToast();
   const { user } = useUser();
-  const { upcomingCalls } = useGetCalls();
+  const { endedCalls, upcomingCalls } = useGetCalls();
 
   const [meetingAction, setMeetingAction] =
     useState<MeetingState>(undefined);
@@ -133,27 +138,84 @@ const HomePage = () => {
               </div>
 
               <div className="rounded-xl border border-[#e7eaf0] bg-white p-7 shadow-[0_4px_18px_rgba(0,0,0,0.06)]">
-                <div className="border-b border-[#edf0f4] pb-5">
+                <div className="flex items-center justify-between border-b border-[#edf0f4] pb-5">
                   <h2 className="text-[24px] font-semibold text-[#111827]">
-                    Recent activity
+                    Previous meetings
                   </h2>
+                  {endedCalls && endedCalls.length > 0 && (
+                    <Link
+                      href="/previous"
+                      className="text-sm font-semibold text-[#2d6cdf] hover:underline"
+                    >
+                      View all
+                    </Link>
+                  )}
                 </div>
 
-                <div className="flex min-h-[270px] flex-col items-center justify-center">
-                  <div className="flex h-[150px] w-[220px] items-center justify-center">
-                    <Image
-                      src="/icons/no-recent-activity.png"
-                      alt="No recent activity"
-                      width={220}
-                      height={150}
-                      className="object-contain"
-                    />
+                {endedCalls && endedCalls.length > 0 ? (
+                  <div className="mt-4 flex flex-col divide-y divide-[#edf0f4]">
+                    {endedCalls.slice(0, 5).map((call) => {
+                      const dateStr = call.scheduled_start_at
+                        ? new Date(call.scheduled_start_at).toLocaleString()
+                        : new Date(call.created_at).toLocaleString();
+
+                      const code = call.meeting_code || call.id;
+
+                      return (
+                        <div
+                          key={call.id}
+                          className="flex flex-col justify-between gap-3 py-3.5 sm:flex-row sm:items-center"
+                        >
+                          <div className="flex flex-col gap-1">
+                            <span className="font-semibold text-[#111827]">
+                              {call.title || "Meeting"}
+                            </span>
+                            <div className="flex items-center gap-2 text-xs text-[#5f6675]">
+                              <span>{dateStr}</span>
+                              <span>&bull;</span>
+                              <span className="font-mono font-medium">
+                                Code: {code}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(code);
+                                toast({
+                                  title: "Meeting code copied",
+                                  description: code,
+                                });
+                              }}
+                              className="rounded-lg border border-[#d7dce5] bg-white px-3 py-1.5 text-xs font-semibold text-[#26344d] hover:bg-[#f6f8fa]"
+                            >
+                              Copy Code
+                            </button>
+                            <button
+                              onClick={() => router.push(`/meeting/${code}`)}
+                              className="rounded-lg bg-[#2d6cdf] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#245bc2]"
+                            >
+                              Rejoin
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-
-                  <p className="mt-5 text-[17px] font-semibold text-[#202938]">
-                    No recent activity
-                  </p>
-                </div>
+                ) : (
+                  <div className="flex min-h-[220px] flex-col items-center justify-center text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f0f4fd] text-[#2d6cdf]">
+                      <History className="h-7 w-7" />
+                    </div>
+                    <p className="mt-4 text-[16px] font-semibold text-[#202938]">
+                      No previous meetings yet
+                    </p>
+                    <p className="mt-1 text-xs text-[#697386]">
+                      Meetings you host or join will appear here.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

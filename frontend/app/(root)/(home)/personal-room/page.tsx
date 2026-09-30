@@ -14,11 +14,11 @@ type TableProps = {
 };
 
 const Table = ({ title, description }: TableProps) => (
-  <div className="flex flex-col items-start gap-2 xl:flex-row">
-    <h1 className="text-base font-medium text-sky-1 lg:text-xl xl:min-w-32">
+  <div className="flex flex-col items-start gap-2 rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm xl:flex-row xl:items-center">
+    <h1 className="text-sm font-medium text-[#5f6675] lg:text-base xl:min-w-36">
       {title}:
     </h1>
-    <p className="truncate text-sm font-bold max-sm:max-w-[320px] lg:text-xl">
+    <p className="truncate text-sm font-semibold text-[#111827] max-sm:max-w-[320px] lg:text-base">
       {description}
     </p>
   </div>
@@ -35,7 +35,11 @@ const PersonalRoomPage = () => {
   if (!user || !user?.id || !isLoaded) return <Loader />;
 
   const meetingCode = user.id;
-  const meetingLink = `${process.env.NEXT_PUBLIC_BASE_URL}/meeting/${meetingCode}?personal=true`;
+  const origin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_BASE_URL || "";
+  const meetingLink = `${origin}/meeting/${meetingCode}?personal=true`;
 
   const startRoom = async () => {
     const existingMeetings = await getMeetings();
@@ -46,9 +50,12 @@ const PersonalRoomPage = () => {
     if (!existing) {
       await createMeeting({
         host_user_id: user.id,
+        host_name: displayName,
         title: `${displayName}'s Meeting Room`,
         description: `${displayName}'s Meeting Room`,
         meeting_code: meetingCode,
+        status: "ACTIVE",
+        started_at: new Date().toISOString(),
         scheduled_start_at: new Date().toISOString(),
         settings: { personal: true },
       });
@@ -58,26 +65,30 @@ const PersonalRoomPage = () => {
   };
 
   return (
-    <section className="flex size-full flex-col gap-10 text-white">
-      <h1 className="text-3xl font-bold">Personal Room</h1>
+    <section className="mx-auto flex size-full max-w-[1180px] flex-col gap-8 px-6 py-8 text-[#111827]">
+      <h1 className="text-3xl font-bold">Personal Meeting Room</h1>
 
-      <div className="flex w-full flex-col gap-8 xl:max-w-[900px]">
+      <div className="flex w-full flex-col gap-4 xl:max-w-[900px]">
         <Table title="Meeting ID" description={meetingCode} />
         <Table title="Topic" description={`${displayName}'s Meeting Room`} />
         <Table title="Invite link" description={meetingLink} />
       </div>
 
-      <div className="flex gap-5">
-        <Button className="bg-blue-1" onClick={startRoom}>
+      <div className="flex gap-4">
+        <Button
+          className="bg-[#2d6cdf] px-6 font-semibold text-white hover:bg-[#245bc2]"
+          onClick={startRoom}
+        >
           Start Meeting
         </Button>
 
         <Button
-          className="bg-dark-3"
+          variant="outline"
+          className="border-[#d7dce5] bg-white px-6 font-semibold text-[#26344d] hover:bg-[#f6f8fa]"
           onClick={() => {
             navigator.clipboard.writeText(meetingLink);
             toast({
-              title: "Link copied.",
+              title: "Link copied to clipboard.",
             });
           }}
         >

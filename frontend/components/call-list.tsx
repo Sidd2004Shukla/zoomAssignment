@@ -74,14 +74,18 @@ export const CallList = ({ type }: CallListType) => {
             }
             isPreviousMeeting={type === "ended"}
             buttonText={type === "recordings" ? "Open" : "Start"}
-            handleClick={
-              () => router.push(`/meeting/${call.id}`)
+            handleClick={() =>
+              router.push(`/meeting/${call.meeting_code || call.id}`)
             }
-            link={`${process.env.NEXT_PUBLIC_BASE_URL}/meeting/${call.id}`}
+            link={
+              typeof window !== "undefined"
+                ? `${window.location.origin}/meeting/${call.meeting_code || call.id}`
+                : `/meeting/${call.meeting_code || call.id}`
+            }
           />
         ))
       ) : (
-        <h1 className="text-2xl font-bold text-white">{noCallsMessage}</h1>
+        <h1 className="text-xl font-semibold text-[#5f6675]">{noCallsMessage}</h1>
       )}
     </div>
   );

@@ -65,19 +65,31 @@ export const MeetingRoom = ({ meeting }: MeetingRoomProps) => {
       if (!isLoaded || !user || !containerRef.current) return;
 
       try {
+        const participantDisplayName =
+          user.fullName ||
+          user.firstName ||
+          user.username ||
+          (isHost ? "Host" : "Participant");
+
         // Record participant joining in backend
-        await joinMeeting(meeting.id, user.fullName || user.username || user.id);
+        await joinMeeting(meeting.id, participantDisplayName);
         refreshParticipants();
       } catch (e) {
         console.warn("Backend join recording:", e);
       }
+
+      const participantDisplayName =
+        user.fullName ||
+        user.firstName ||
+        user.username ||
+        (isHost ? "Host" : "Participant");
 
       const [zegoModule, tokenResponse] = await Promise.all([
         import("@zegocloud/zego-uikit-prebuilt"),
         createZegoToken(meeting.id, {
           room_id: roomId,
           user_id: user.id,
-          user_name: user.fullName || user.username || user.id,
+          user_name: participantDisplayName,
         }),
       ]);
 
@@ -212,8 +224,14 @@ export const MeetingRoom = ({ meeting }: MeetingRoomProps) => {
   };
 
   const copyMeetingCode = () => {
-    navigator.clipboard.writeText(meeting.meeting_code || meeting.id);
-    toast({ title: "Meeting code copied to clipboard" });
+    const code = meeting.meeting_code || meeting.id;
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(code);
+    }
+    toast({
+      title: "Meeting code copied to clipboard",
+      description: code,
+    });
   };
 
   if (!isLoaded || !user) {
@@ -230,12 +248,14 @@ export const MeetingRoom = ({ meeting }: MeetingRoomProps) => {
           </h1>
           <button
             onClick={copyMeetingCode}
-            className="flex items-center gap-1.5 rounded-lg bg-dark-3 px-2.5 py-1 text-xs text-sky-1 hover:text-white"
-            title="Copy meeting code"
+            className="flex items-center gap-1.5 rounded-lg bg-dark-3 px-2.5 py-1 text-xs text-sky-1 hover:text-white transition"
+            title={`Click to copy meeting code (${meeting.meeting_code || meeting.id})`}
           >
             <Copy size={13} />
-            <span className="hidden sm:inline">Code:</span>
-            <span className="font-mono">{meeting.meeting_code?.slice(0, 8)}...</span>
+            <span className="hidden sm:inline text-gray-300">Code:</span>
+            <span className="font-mono font-semibold text-white">
+              {meeting.meeting_code || meeting.id}
+            </span>
           </button>
         </div>
 
@@ -318,7 +338,7 @@ export const MeetingRoom = ({ meeting }: MeetingRoomProps) => {
               <div className="flex items-center justify-between pb-3 border-b border-dark-3">
                 <div className="flex items-center gap-2">
                   <Users size={18} className="text-blue-1" />
-                  <h3 className="font-semibold text-sm">Roster ({participants.length})</h3>
+                  <h3 className="font-semibold text-sm">Participants ({participants.length})</h3>
                 </div>
                 {isHost && (
                   <Button
@@ -342,6 +362,22 @@ export const MeetingRoom = ({ meeting }: MeetingRoomProps) => {
                     const isSelf = p.user_id === user.id;
                     const isTargetHost = p.role === "HOST";
 
+                    let displayName = p.display_name?.trim() || "";
+                    if (isSelf) {
+                      displayName =
+                        user.fullName ||
+                        user.firstName ||
+                        user.username ||
+                        displayName ||
+                        "You";
+                    } else if (
+                      !displayName ||
+                      displayName.startsWith("user_") ||
+                      /^[0-9a-f-]{20,}$/i.test(displayName)
+                    ) {
+                      displayName = isTargetHost ? "Host" : "Participant";
+                    }
+
                     return (
                       <div
                         key={p.id}
@@ -349,7 +385,7 @@ export const MeetingRoom = ({ meeting }: MeetingRoomProps) => {
                       >
                         <div className="flex flex-col truncate pr-2">
                           <span className="font-medium text-white truncate">
-                            {p.display_name || "Guest"} {isSelf && "(You)"}
+                            {displayName} {isSelf && "(You)"}
                           </span>
                           <span className="text-[10px] text-sky-2">
                             {p.role} &bull; {p.status}
@@ -404,7 +440,7 @@ export const MeetingRoom = ({ meeting }: MeetingRoomProps) => {
               className="w-full mt-3 bg-dark-3 border-none hover:bg-[#4C535B] text-xs"
               onClick={() => setShowParticipants(false)}
             >
-              Close Roster
+              Close
             </Button>
           </aside>
         )}
