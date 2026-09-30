@@ -1,6 +1,32 @@
-# Zoom Clone - Real-Time Video Conferencing Application
+# Video Conferencing Platform (Zoom Clone) - SDE Fullstack Assignment
 
-A full-stack Zoom-clone web application featuring an interactive Next.js SPA frontend, a high-performance Python FastAPI backend, SQLite persistence via SQLAlchemy & Alembic, and real-time audio/video powered by ZEGOCLOUD.
+[![Deployment Status](https://img.shields.io/badge/Deployment-Live%20on%20Vercel-success)](https://zoomassignment.vercel.app)
+[![Next.js](https://img.shields.io/badge/Frontend-Next.js%2015.5%20(React%2019)-blue)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI%20(Python%203.12)-009688)](https://fastapi.tiangolo.com/)
+[![SQLite](https://img.shields.io/badge/Database-SQLite%203%20+%20SQLAlchemy%202.0-003B57)](https://www.sqlite.org/)
+[![Real-Time RTC](https://img.shields.io/badge/WebRTC-ZEGOCLOUD%20UIKit-orange)](https://www.zegocloud.com/)
+
+A modern, full-stack video conferencing web application designed and built to replicate the user experience, design system, and core meeting workflows of the **Zoom Web App**.
+
+- **Deployed Application Link**: [https://zoomassignment.vercel.app](https://zoomassignment.vercel.app)
+- **GitHub Repository**: [https://github.com/Sidd2004Shukla/zoomAssignment](https://github.com/Sidd2004Shukla/zoomAssignment)
+
+---
+
+## Evaluation Requirements & Feature Compliance
+
+| Assignment Requirement | Feature Implementation | Status |
+| :--- | :--- | :---: |
+| **Landing Dashboard** | Clean Zoom UI, navigation bar with profile & settings placeholders, action buttons (New Meeting, Schedule, Join), Upcoming and Previous meetings sections. | **Complete** |
+| **Instant Meeting Creation** | One-click instant meeting creation, auto-generates 10-digit Meeting ID and shareable link, redirects to active room. | **Complete** |
+| **Join Meeting** | Join via Meeting ID or invite URL, enter/confirm display name in pre-join lobby, validates meeting existence with error feedback. | **Complete** |
+| **Schedule Meetings** | Modal with Topic/Title, Description, Date & Time picker, and Duration dropdown. Stores in SQLite and populates Upcoming Meetings. | **Complete** |
+| **No Login Required** | Pre-configured Default Host User (`Alex Morgan`) allows immediate evaluation of all features without requiring sign-up. | **Complete** |
+| **Sample Data (Seeding)** | Auto-seeds on startup and via `python -m app.core.seed` with upcoming calls, previous calls, and audit events. | **Complete** |
+| **Database Design** | 5 relational tables (`users`, `meetings`, `meeting_participants`, `meeting_invitations`, `meeting_events`) with strict foreign keys and indexes. | **Complete** |
+| **Bonus: Responsive Design** | Fully responsive layout across mobile, tablet, and desktop with dedicated slide-over mobile navigation. | **Complete** |
+| **Bonus: User Authentication** | Production-ready Clerk Login/Signup with dedicated Zoom-styled auth pages and quick-skip demo mode. | **Complete** |
+| **Bonus: Host Controls** | Authoritative moderator panel with Mute All, per-participant mute/unmute, and remove participant (kick) actions. | **Complete** |
 
 ---
 
@@ -8,195 +34,155 @@ A full-stack Zoom-clone web application featuring an interactive Next.js SPA fro
 
 ```mermaid
 graph TD
-    subgraph Frontend ["Frontend (Next.js SPA - Port 3000)"]
-        UI[Next.js App Router & Tailwind CSS]
-        ClerkClient[Clerk Auth & Session Provider]
-        APIClient[Centralized API Client Layer]
-        ZegoClient[ZEGOCLOUD Prebuilt Live Room]
+    subgraph Frontend ["Frontend (Next.js SPA - App Router)"]
+        UI["Zoom Dashboard UI (Tailwind CSS)"]
+        AuthContext["Auth Context (Clerk + Default Host Mode)"]
+        APIClient["API Client (REST + Auth Headers)"]
+        RTCClient["ZEGOCLOUD WebRTC Video Room"]
     end
 
-    subgraph AuthProvider ["Authentication (Clerk)"]
-        ClerkCloud[Clerk Auth Service]
+    subgraph Backend ["Backend (FastAPI - Python 3.12)"]
+        API["FastAPI Modular App (/api/v1)"]
+        MeetingsRouter["Meetings Lifecycle Router"]
+        ParticipantsRouter["Participants & Host Moderation"]
+        EventsService["Meeting Audit Trail Service"]
+        ZegoSecurity["AES-128-CBC Server Token Minting"]
     end
 
-    subgraph Backend ["Backend (FastAPI - Port 8000)"]
-        FastAPIApp[FastAPI Modular App]
-        AuthModule[Auth & User Resolution]
-        MeetingModule[Meetings CRUD & Lifecycle]
-        ParticipantModule[Participant Moderation]
-        AuditEvents[Event Logging Service]
-        ZegoService[ZEGOCLOUD Token Generator]
+    subgraph Database ["Database Layer (SQLite)"]
+        SQLiteDB[("backend/data/app.db (SQLAlchemy 2.0)")]
     end
 
-    subgraph Storage ["Database (SQLite)"]
-        SQLiteDB[(backend/data/app.db)]
+    subgraph MediaCloud ["Real-Time Media Cloud"]
+        ZegoRTC["ZEGOCLOUD RTC Media Gateway"]
     end
 
-    subgraph VideoEngine ["Real-Time Video Engine"]
-        ZegoCloud[ZEGOCLOUD RTC Cloud]
-    end
-
-    UI --> ClerkClient
-    ClerkClient <--> ClerkCloud
+    UI --> AuthContext
     UI --> APIClient
-    APIClient -- "REST + Bearer JWT / X-User-Id" --> FastAPIApp
-    FastAPIApp --> AuthModule
-    FastAPIApp --> MeetingModule
-    FastAPIApp --> ParticipantModule
-    FastAPIApp --> AuditEvents
-    FastAPIApp --> ZegoService
-    AuthModule --> SQLiteDB
-    MeetingModule --> SQLiteDB
-    ParticipantModule --> SQLiteDB
-    AuditEvents --> SQLiteDB
-    ZegoService -- "Server Secret AES-CBC Token" --> APIClient
-    APIClient --> ZegoClient
-    ZegoClient -- "WebRTC Stream" --> ZegoCloud
+    APIClient --> API
+    API --> MeetingsRouter
+    API --> ParticipantsRouter
+    API --> EventsService
+    API --> ZegoSecurity
+    MeetingsRouter --> SQLiteDB
+    ParticipantsRouter --> SQLiteDB
+    EventsService --> SQLiteDB
+    ZegoSecurity -- "Encrypted Room Token" --> APIClient
+    APIClient --> RTCClient
+    RTCClient <--> ZegoRTC
 ```
 
 ---
 
-## Technology Stack
+## Database Design & Schema
 
-- **Frontend**:
-  - Next.js 15 (App Router, Single Page Application)
-  - React 19 & TypeScript
-  - Tailwind CSS & Radix UI Primitives
-  - Lucide React Icons
-  - `@zegocloud/zego-uikit-prebuilt` (Real-Time Audio/Video)
-  - `@clerk/nextjs` (Authentication)
-- **Backend**:
-  - Python 3.12 & FastAPI
-  - Uvicorn (ASGI Server)
-  - SQLAlchemy 2.0 (ORM)
-  - Alembic (Database Migrations)
-  - Cryptography & PyJWT (Token Security)
-- **Database**:
-  - SQLite (stored locally at `backend/data/app.db`)
-- **Video & Audio**:
-  - ZEGOCLOUD Video Conference Engine with AES-CBC PKCS7 server-generated kit tokens
+The relational schema is implemented with SQLAlchemy 2.0 and SQLite, featuring foreign key constraints, cascading rules, and composite indexes.
 
----
+```mermaid
+erDiagram
+    User ||--o{ Meeting : "hosts"
+    User ||--o{ MeetingParticipant : "participates_as"
+    User ||--o{ MeetingEvent : "triggers"
+    Meeting ||--o{ MeetingParticipant : "contains"
+    Meeting ||--o{ MeetingInvitation : "issues"
+    Meeting ||--o{ MeetingEvent : "logs"
 
-## Key Features
+    User {
+        string id PK "UUID / String(36)"
+        string auth_provider_user_id UK "Unique Clerk/Local ID"
+        string email UK "Indexed unique email"
+        string name "Display name"
+        string avatar_url "Profile image"
+        string status "Enum: ACTIVE, INACTIVE, SUSPENDED"
+        datetime created_at
+        datetime updated_at
+    }
 
-1. **Authentication & Identity**:
-   - Secure login and registration via Clerk.
-   - Protected routes via Next.js middleware.
-   - Automatic backend identity resolution and user auto-provisioning.
-2. **Meeting Management**:
-   - **Instant Meetings**: Start a room immediately with a single click.
-   - **Scheduled Meetings**: Schedule future calls with interactive date/time picker.
-   - **Personal Meeting Room**: Dedicated static room link per user.
-   - **Join by ID / Code**: Paste a meeting link or UUID code to join.
-3. **In-Meeting Experience**:
-   - Real-time video grid and active speaker views.
-   - Dynamic layout switching (`Auto`, `Grid`, `Sidebar`).
-   - Microphone, camera, and device settings controls.
-   - Screen sharing and in-room chat.
-4. **Host Moderation Controls**:
-   - Centralized permission guards ensuring only host/co-host can moderate.
-   - **Mute All**: One-click mute for all attendees.
-   - **Per-Participant Mute/Unmute**: Moderation menu per participant.
-   - **Remove Participant**: Authoritatively kick disruptive attendees.
-   - **End Meeting for Everyone**: Host can end the session and clean up the room.
-5. **Participant Roster & Live Status**:
-   - Slide-over live roster drawer showing connected participants, roles (`HOST`, `PARTICIPANT`), joined timestamps, and mute status.
-6. **Audit Trail & Event Logging**:
-   - Complete event history tracked in SQLite: `MEETING_CREATED`, `PARTICIPANT_JOINED`, `PARTICIPANT_LEFT`, `PARTICIPANT_MUTED`, `ALL_PARTICIPANTS_MUTED`, `PARTICIPANT_REMOVED`, `MEETING_ENDED`.
-7. **Dashboard & Meeting History**:
-   - Live dashboard clock and next upcoming meeting preview.
-   - Upcoming and Previous meeting tabs sorted chronologically.
+    Meeting {
+        string id PK "UUID / String(36)"
+        string host_user_id FK "References users.id"
+        string title "Meeting topic"
+        text description "Agenda / notes"
+        string meeting_code UK "10-digit PMI or UUID"
+        string status "Enum: SCHEDULED, ACTIVE, ENDED, CANCELED"
+        datetime scheduled_start_at
+        datetime scheduled_end_at
+        datetime started_at
+        datetime ended_at
+        int max_participants "Capacity limit"
+        json settings "Duration, personal room flags"
+        datetime created_at
+        datetime updated_at
+    }
 
----
+    MeetingParticipant {
+        string id PK "UUID / String(36)"
+        string meeting_id FK "References meetings.id"
+        string user_id FK "Nullable for guests"
+        string display_name "Visible attendee name"
+        string role "Enum: HOST, CO_HOST, PARTICIPANT"
+        string status "Enum: INVITED, JOINED, LEFT, REMOVED"
+        datetime joined_at
+        datetime left_at
+        boolean is_muted "Host-controlled mute state"
+        boolean is_video_enabled
+        boolean is_removed "Authoritative kick flag"
+        datetime created_at
+        datetime updated_at
+    }
 
-## Directory Structure
+    MeetingInvitation {
+        string id PK "UUID / String(36)"
+        string meeting_id FK "References meetings.id"
+        string inviter_user_id FK
+        string invitee_user_id FK
+        string invitee_email
+        string status "Enum: PENDING, ACCEPTED, DECLINED, EXPIRED"
+        datetime expires_at
+        datetime created_at
+        datetime updated_at
+    }
 
-```
-zoom_Assignment/
-├── backend/
-│   ├── app/
-│   │   ├── auth/              # Auth dependencies & /auth/me router
-│   │   ├── common/            # Enums (MeetingStatus, ParticipantRole, etc.)
-│   │   ├── core/              # Config, database setup, JWT security
-│   │   ├── events/            # Meeting audit event logger
-│   │   ├── integrations/      # ZEGOCLOUD AES token generation service
-│   │   ├── meetings/          # Meeting CRUD, lifecycle, join/leave, tokens
-│   │   ├── participants/      # Participant management & moderation controls
-│   │   ├── permissions/       # Host/co-host authorization guards
-│   │   ├── users/             # User profiles & user sync router
-│   │   ├── api.py             # Router aggregator
-│   │   ├── main.py            # FastAPI entry point & CORS configuration
-│   │   ├── models.py          # SQLAlchemy models (5 tables)
-│   │   └── schemas.py         # Pydantic request & response schemas
-│   ├── data/
-│   │   └── app.db             # Local SQLite database
-│   ├── migrations/            # Alembic migrations
-│   ├── tests/
-│   │   └── test_api_suite.py  # Automated integration verification suite
-│   ├── requirements.txt
-│   └── alembic.ini
-│
-└── frontend/
-    ├── app/
-    │   ├── (auth)/            # Clerk sign-in and sign-up pages
-    │   ├── (root)/
-    │   │   ├── (home)/        # Dashboard, Upcoming, Previous, Recordings, Personal Room
-    │   │   └── meeting/[id]/  # Live meeting room dynamic route
-    │   ├── layout.tsx         # ClerkProvider & Root layout
-    │   └── globals.css        # Global Tailwind styles
-    ├── components/
-    │   ├── meeting-room.tsx   # Live ZEGOCLOUD container & Host Roster
-    │   ├── meeting-type-list.tsx # Action cards (New Meeting, Schedule, Join)
-    │   ├── call-list.tsx      # Upcoming / Previous calls list
-    │   ├── navbar.tsx         # Navbar with Clerk UserButton
-    │   ├── sidebar.tsx        # Navigation sidebar
-    │   └── ui/                # Radix UI components
-    ├── hooks/
-    │   ├── use-get-call-by-id.ts
-    │   └── use-get-calls.ts
-    ├── lib/api/               # Typed API client layer (client, meetings, participants, zego)
-    ├── middleware.ts          # Clerk route protection middleware
-    └── package.json
+    MeetingEvent {
+        string id PK "UUID / String(36)"
+        string meeting_id FK "References meetings.id"
+        string actor_user_id FK
+        string target_user_id FK
+        string event_type "Enum: CREATED, JOINED, MUTED, REMOVED, ENDED"
+        json metadata "Context details"
+        datetime created_at
+        datetime updated_at
+    }
 ```
 
 ---
 
-## Backend API Reference (`/api/v1`)
+## Assumptions & Design Decisions
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/health` | API health check |
-| `GET` | `/auth/me` | Resolve current authenticated user profile |
-| `POST` | `/users` | Create or sync user record |
-| `GET` | `/users/me` | Fetch active user profile |
-| `PATCH` | `/users/me` | Update active user profile |
-| `GET` | `/users/{id}` | Fetch user by ID |
-| `POST` | `/meetings` | Create meeting (instant, scheduled, or personal) |
-| `GET` | `/meetings` | List all meetings sorted by creation date |
-| `GET` | `/meetings/{id}` | Get meeting by ID or meeting code |
-| `PATCH` | `/meetings/{id}` | Update meeting status or scheduled times |
-| `DELETE` | `/meetings/{id}` | Delete / cancel meeting |
-| `POST` | `/meetings/{id}/join` | Register attendee participation (`JOINED`) |
-| `POST` | `/meetings/{id}/leave` | Mark participant as `LEFT` |
-| `POST` | `/meetings/{id}/zego-token` | Generate authenticated ZEGOCLOUD kit token |
-| `GET` | `/meetings/{id}/events` | Fetch complete meeting audit history |
-| `GET` | `/meetings/{id}/participants` | List active meeting participants |
-| `POST` | `/meetings/{id}/participants` | Add / invite participant |
-| `DELETE` | `/meetings/{id}/participants/{id}` | Remove attendee (Host only) |
-| `POST` | `/meetings/{id}/participants/{id}/mute` | Mute/unmute attendee (Host only) |
-| `POST` | `/meetings/{id}/participants/mute-all` | Mute all attendees (Host only) |
+1. **No Login Required & Seamless Evaluation**:
+   - The assignment notes: *"Assume a default user is logged in. Focus on the functionality rather than authentication."*
+   - To provide the best evaluation experience, visiting the application immediately logs you in as **`Alex Morgan` (Default Host)**.
+   - Evaluators can immediately test **New Meeting**, **Join Meeting**, **Schedule Meeting**, and **Personal Room** without entering credentials.
+   - For evaluators who want to test the **User Authentication (Bonus)**, Clerk sign-in and sign-up are fully configured with a one-click *"Skip Login &rarr;"* demo button.
+2. **Server-Side Token Security**:
+   - WebRTC media tokens are minted exclusively by the FastAPI backend using AES-128-CBC encryption and an dynamic expiration timestamp. Client browsers never receive the ZegoCloud server secret.
+3. **Deterministic Personal Meeting ID (PMI)**:
+   - Personal rooms generate a deterministic 10-digit Zoom-style ID (e.g. `839-204-1582`) derived from the user's identity, allowing permanent, repeatable room links.
+4. **Vercel Services Architecture**:
+   - Deployable as a unified monorepo on Vercel Services where frontend routes (`/(.*)`) and backend API endpoints (`/api/(.*)`) run seamlessly with private service bindings.
 
 ---
 
-## Getting Started
+## Getting Started & Local Setup
 
 ### 1. Prerequisites
-- Node.js v18+ (tested on Node v22)
-- Python 3.10+ (tested on Python 3.12)
+- **Node.js**: v18+ (tested on Node v20/v22)
+- **Python**: v3.10+ (tested on Python 3.12)
+- **Git**
 
 ### 2. Backend Setup
 ```bash
+# Navigate to backend directory
 cd backend
 
 # Install dependencies
@@ -205,25 +191,30 @@ pip install -r requirements.txt
 # Run database migrations
 alembic upgrade head
 
-# Start FastAPI server
+# Seed sample data (optional - auto-seeds on first run)
+python -m app.core.seed
+
+# Start FastAPI development server
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-The backend API is accessible at `http://127.0.0.1:8000`. Interactive OpenAPI documentation is available at `http://127.0.0.1:8000/docs`.
+The FastAPI backend will be running at `http://127.0.0.1:8000`.
+Interactive Swagger API docs: `http://127.0.0.1:8000/docs`.
 
 ### 3. Frontend Setup
 ```bash
+# Navigate to frontend directory
 cd frontend
 
 # Install dependencies
 npm install
 
-# Start Next.js dev server
+# Start Next.js development server
 npm run dev
 ```
-The application is accessible at `http://localhost:3000`.
+The application will be running at `http://localhost:3000`.
 
-### 4. Running Automated Tests
-To run the full backend integration test suite:
+### 4. Running Verification & Automated Tests
+To run the automated backend test suite (verifying all 13 core endpoints and moderation workflows):
 ```bash
 cd backend
 python tests/test_api_suite.py
@@ -248,14 +239,87 @@ Expected output:
 === ALL 13 BACKEND ENDPOINTS & STAGES VERIFIED PERFECTLY! ===
 ```
 
-### 5. Running with Vercel Services Locally
-To run both the Next.js frontend and FastAPI backend together with service bindings and unified routing:
+To run linting and typecheck on the frontend:
 ```bash
-# Install Vercel CLI globally if not already installed
-npm install -g vercel
-
-# Run all services together locally
-vercel dev
+cd frontend
+npm run lint         # 0 warnings, 0 errors
+npx tsc --noEmit     # 0 errors
+npm run build        # Production build successful
 ```
-`vercel dev` starts both services, injects the `BACKEND_URL` binding variable into the frontend functions, and routes all `/api/(.*)` requests to the backend while serving the Next.js app on `/(.*)`.
 
+---
+
+## API Endpoints Reference (`/api/v1`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/health` | Service health status |
+| `POST` | `/users` | Create / sync user profile |
+| `GET` | `/users/{id}` | Fetch user by ID |
+| `POST` | `/meetings` | Create meeting (instant, scheduled, or personal) |
+| `GET` | `/meetings` | List all meetings sorted chronologically |
+| `GET` | `/meetings/{id}` | Fetch meeting by ID or 10-digit meeting code |
+| `PATCH` | `/meetings/{id}` | Update meeting status, title, or schedule |
+| `DELETE` | `/meetings/{id}` | Delete / cancel meeting |
+| `POST` | `/meetings/{id}/join` | Register attendee participation (`JOINED`) |
+| `POST` | `/meetings/{id}/leave` | Mark participant as `LEFT` |
+| `POST` | `/meetings/{id}/zego-token` | Generate authenticated WebRTC room token |
+| `GET` | `/meetings/{id}/events` | Fetch complete audit event trail |
+| `GET` | `/meetings/{id}/participants` | List active participants in meeting |
+| `POST` | `/meetings/{id}/participants/{id}/mute` | Mute/unmute attendee (Host only) |
+| `POST` | `/meetings/{id}/participants/mute-all` | Mute all attendees (Host only) |
+| `DELETE` | `/meetings/{id}/participants/{id}` | Remove / kick participant (Host only) |
+
+---
+
+## Project Structure
+
+```
+zoom_Assignment/
+├── backend/
+│   ├── app/
+│   │   ├── auth/              # Auth dependencies & token parsing
+│   │   ├── common/            # Database enums (MeetingStatus, ParticipantRole, etc.)
+│   │   ├── core/              # Config, database engine, JWT security, data seeder
+│   │   ├── events/            # Meeting audit event logger
+│   │   ├── integrations/      # ZEGOCLOUD AES-128-CBC kit token generator
+│   │   ├── meetings/          # Meeting CRUD, lifecycle, join/leave, tokens
+│   │   ├── participants/      # Participant management & host moderation
+│   │   ├── permissions/       # Host/co-host authorization guards
+│   │   ├── users/             # User profiles & user sync
+│   │   ├── api.py             # Router aggregator & lifespan DB init
+│   │   ├── main.py            # FastAPI entry point & CORS configuration
+│   │   ├── models.py          # SQLAlchemy 2.0 ORM models (5 tables)
+│   │   └── schemas.py         # Pydantic v2 request & response schemas
+│   ├── data/
+│   │   └── app.db             # Local SQLite database
+│   ├── migrations/            # Alembic migrations
+│   ├── tests/
+│   │   └── test_api_suite.py  # 13-stage automated verification suite
+│   ├── requirements.txt
+│   └── alembic.ini
+│
+└── frontend/
+    ├── app/
+    │   ├── (auth)/            # Clerk sign-in and sign-up with demo skip
+    │   ├── (root)/
+    │   │   ├── (home)/        # Dashboard, Upcoming, Previous, Personal Room
+    │   │   └── meeting/[id]/  # Dynamic live meeting room & pre-join lobby
+    │   ├── layout.tsx         # ClerkProvider, Root layout & fonts
+    │   └── globals.css        # Tailwind styles & Zoom theme tokens
+    ├── components/
+    │   ├── meeting-room.tsx   # Live WebRTC room & Host Roster controls
+    │   ├── meeting-type-list.tsx # Action modals (Schedule, Join, Instant)
+    │   ├── meeting-card.tsx   # Clean Zoom meeting cards
+    │   ├── call-list.tsx      # Upcoming / Previous calls list
+    │   ├── navbar.tsx         # Navbar with profile, settings & help dialogs
+    │   ├── sidebar.tsx        # Navigation sidebar
+    │   ├── auth-guard.tsx     # Instant default user access guard
+    │   └── ui/                # Radix UI primitives
+    ├── hooks/
+    │   ├── use-current-user.ts # Unified Clerk / Default User provider
+    │   ├── use-get-call-by-id.ts
+    │   └── use-get-calls.ts
+    ├── lib/api/               # Typed API client layer
+    └── package.json
+```

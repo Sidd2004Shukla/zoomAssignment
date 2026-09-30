@@ -34,8 +34,11 @@ def init_db():
         if settings.database_url.startswith("sqlite") and engine.url.database:
             Path(engine.url.database).parent.mkdir(parents=True, exist_ok=True)
         Base.metadata.create_all(bind=engine)
+
+        from app.core.seed import seed_database
+        seed_database()
     except Exception as e:
-        print(f"Warning: Failed to auto-create database tables: {e}")
+        print(f"Warning: Failed to auto-create database tables or seed data: {e}")
 
 
 @asynccontextmanager

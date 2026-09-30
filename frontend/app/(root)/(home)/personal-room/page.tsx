@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { useRouter } from "next/navigation";
 
 import { useEffect } from "react";
@@ -29,7 +29,7 @@ const Table = ({ title, description }: TableProps) => (
 const PersonalRoomPage = () => {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useCurrentUser();
 
   const displayName =
     user?.fullName || user?.username || user?.firstName || "Personal";

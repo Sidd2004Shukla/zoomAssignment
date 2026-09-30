@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarDays, History, Plus, Video } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -19,7 +19,7 @@ type MeetingState =
 const HomePage = () => {
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useUser();
+  const { user } = useCurrentUser();
   const { endedCalls, upcomingCalls } = useGetCalls();
 
   const [meetingAction, setMeetingAction] =

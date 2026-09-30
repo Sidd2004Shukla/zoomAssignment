@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { Copy, LayoutList, Mic, MicOff, PhoneOff, ShieldAlert, UserMinus, Users, VolumeX } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
@@ -31,7 +31,7 @@ type CallLayoutType = "Auto" | "Grid" | "Sidebar";
 export const MeetingRoom = ({ meeting }: MeetingRoomProps) => {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useCurrentUser();
   const containerRef = useRef<HTMLDivElement>(null);
   const zegoRef = useRef<any>(null);
 
@@ -64,13 +64,24 @@ export const MeetingRoom = ({ meeting }: MeetingRoomProps) => {
     const initializeRoom = async () => {
       if (!isLoaded || !user || !containerRef.current) return;
 
-      try {
-        const participantDisplayName =
-          user.fullName ||
-          user.firstName ||
-          user.username ||
-          (isHost ? "Host" : "Participant");
+      const searchName =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("name")
+          : null;
+      const storedName =
+        typeof window !== "undefined"
+          ? sessionStorage.getItem("zoom_display_name")
+          : null;
 
+      const participantDisplayName =
+        searchName ||
+        storedName ||
+        user.fullName ||
+        user.firstName ||
+        user.username ||
+        (isHost ? "Host" : "Participant");
+
+      try {
         // Record participant joining in backend
         await joinMeeting(meeting.id, participantDisplayName);
         refreshParticipants();
@@ -78,17 +89,13 @@ export const MeetingRoom = ({ meeting }: MeetingRoomProps) => {
         console.warn("Backend join recording:", e);
       }
 
-      const participantDisplayName =
-        user.fullName ||
-        user.firstName ||
-        user.username ||
-        (isHost ? "Host" : "Participant");
+      const cleanUserId = user.id.replace(/[^a-zA-Z0-9_]/g, "_");
 
       const [zegoModule, tokenResponse] = await Promise.all([
         import("@zegocloud/zego-uikit-prebuilt"),
         createZegoToken(meeting.id, {
           room_id: roomId,
-          user_id: user.id,
+          user_id: cleanUserId,
           user_name: participantDisplayName,
         }),
       ]);

@@ -1,6 +1,5 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import ReactDatePicker from "react-datepicker";
@@ -9,8 +8,8 @@ import { MeetingModal } from "@/components/modals/meeting-modal";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { createMeeting as createBackendMeeting } from "@/lib/api/meetings";
-
 import { generateMeetingCode } from "@/lib/utils";
 
 import { HomeCard } from "./home-card";
@@ -35,18 +34,20 @@ export const MeetingTypeList = ({
 }: MeetingTypeListProps) => {
   const router = useRouter();
   const { toast } = useToast();
+  const { user, isLoaded } = useCurrentUser();
 
   const [isLoading, setIsLoading] = useState(false);
   const [meetingLink, setMeetingLink] = useState<string>();
   const [meetingState, setMeetingState] = useState<MeetingState>(undefined);
 
   const [values, setValues] = useState({
-    dateTime: new Date(),
+    title: "",
     description: "",
+    dateTime: new Date(Date.now() + 15 * 60 * 1000), // Default +15 mins from now
+    durationMinutes: 30,
     link: "",
+    displayName: "",
   });
-
-  const { user } = useUser();
 
   useEffect(() => {
     if (externalMeetingState) {
@@ -54,10 +55,24 @@ export const MeetingTypeList = ({
     }
   }, [externalMeetingState]);
 
+  useEffect(() => {
+    if (user && !values.displayName) {
+      setValues((prev) => ({
+        ...prev,
+        displayName: user.fullName || user.firstName || "Guest",
+      }));
+    }
+  }, [user, values.displayName]);
+
   const closeMeetingModal = () => {
     setMeetingState(undefined);
     setMeetingLink(undefined);
-    setValues((prev) => ({ ...prev, description: "", link: "" }));
+    setValues((prev) => ({
+      ...prev,
+      title: "",
+      description: "",
+      link: "",
+    }));
     onExternalClose?.();
   };
 
@@ -71,7 +86,7 @@ export const MeetingTypeList = ({
         user.fullName ||
         user.firstName ||
         user.username ||
-        undefined;
+        "Alex Morgan";
 
       const meetingCode = generateMeetingCode();
       const origin =
@@ -84,7 +99,7 @@ export const MeetingTypeList = ({
           host_user_id: user.id,
           host_name: hostName,
           title: "Instant meeting",
-          description: "Instant meeting",
+          description: "Instant meeting started from dashboard",
           meeting_code: meetingCode,
           status: "ACTIVE",
           started_at: new Date().toISOString(),
@@ -108,22 +123,33 @@ export const MeetingTypeList = ({
         });
       }
 
+      const scheduledStart = values.dateTime;
+      const scheduledEnd = new Date(
+        scheduledStart.getTime() + (values.durationMinutes || 30) * 60 * 1000
+      );
+
+      const meetingTitle = values.title.trim() || "Scheduled Zoom Meeting";
+
       const meeting = await createBackendMeeting({
         host_user_id: user.id,
         host_name: hostName,
-        title: values.description || "Scheduled meeting",
-        description: values.description || "Scheduled meeting",
+        title: meetingTitle,
+        description: values.description.trim() || meetingTitle,
         meeting_code: meetingCode,
         status: "SCHEDULED",
-        scheduled_start_at: values.dateTime.toISOString(),
-        settings: {},
+        scheduled_start_at: scheduledStart.toISOString(),
+        scheduled_end_at: scheduledEnd.toISOString(),
+        settings: {
+          duration_minutes: values.durationMinutes,
+        },
       });
 
       const fullLink = `${origin}/meeting/${meeting.meeting_code || meeting.id}`;
       setMeetingLink(fullLink);
 
       toast({
-        title: "Meeting scheduled successfully.",
+        title: "Meeting scheduled successfully",
+        description: `Scheduled for ${scheduledStart.toLocaleDateString()} at ${scheduledStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
       });
     } catch (error) {
       console.error("CREATE_MEETING: ", error);
@@ -142,10 +168,20 @@ export const MeetingTypeList = ({
   };
 
   const handleJoinMeeting = () => {
-    if (!values.link) return;
-
     let input = values.link.trim();
-    if (!input) return;
+    if (!input) {
+      toast({
+        title: "Please enter a Meeting ID or invite link",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Save customized display name in session storage
+    const enteredName = values.displayName.trim() || user?.fullName || "Guest";
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("zoom_display_name", enteredName);
+    }
 
     input = input.replace(/\/+$/, "");
 
@@ -159,12 +195,15 @@ export const MeetingTypeList = ({
       input = `https://${input}`;
     }
 
+    const nameParam = `name=${encodeURIComponent(enteredName)}`;
+
     if (input.startsWith("http://") || input.startsWith("https://")) {
       try {
         const url = new URL(input);
         const match = url.pathname.match(/\/meeting\/([^/?#]+)/);
         if (match && match[1]) {
-          router.push(`/meeting/${match[1]}`);
+          const sep = url.search ? "&" : "?";
+          router.push(`/meeting/${match[1]}${url.search}${sep}${nameParam}`);
           return;
         }
         router.push(url.pathname + url.search);
@@ -175,14 +214,15 @@ export const MeetingTypeList = ({
     }
 
     if (input.startsWith("/meeting/")) {
-      router.push(input);
+      const sep = input.includes("?") ? "&" : "?";
+      router.push(`${input}${sep}${nameParam}`);
       return;
     }
 
-    router.push(`/meeting/${encodeURIComponent(input)}`);
+    router.push(`/meeting/${encodeURIComponent(input)}?${nameParam}`);
   };
 
-  if (!user || !user.id) {
+  if (!isLoaded || !user) {
     return <Loader />;
   }
 
@@ -216,104 +256,198 @@ export const MeetingTypeList = ({
         </section>
       )}
 
+      {/* Schedule Meeting Modal */}
       {!meetingLink ? (
         <MeetingModal
           isOpen={meetingState === "isScheduleMeeting"}
           onClose={closeMeetingModal}
-          title="Create meeting"
+          title="Schedule a Meeting"
           handleClick={handleCreateMeeting}
           isLoading={isLoading}
+          buttonText="Schedule Meeting"
         >
-          <div className="flex flex-col gap-2.5">
-            <label className="text-normal text-base leading-[22px] text-sky-2">
-              Add a description
+          <div className="flex flex-col gap-4 text-left">
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider text-[#4b5563]">
+                Meeting Topic / Title
+              </label>
+              <Input
+                placeholder="e.g. Product Architecture Review"
+                value={values.title}
+                className="mt-1.5 border border-[#d1d5db] bg-white text-[#111827] focus-visible:ring-1 focus-visible:ring-[#2d6cdf]"
+                onChange={(e) =>
+                  setValues((prev) => ({ ...prev, title: e.target.value }))
+                }
+              />
+            </div>
 
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider text-[#4b5563]">
+                Description / Agenda (Optional)
+              </label>
               <Textarea
-                rows={6}
-                placeholder="Add a description..."
-                className="mt-2 resize-none border-none bg-dark-3"
-                onChange={(e) => {
-                  setValues({
-                    ...values,
+                rows={3}
+                placeholder="Meeting details, agenda, and topics..."
+                className="mt-1.5 resize-none border border-[#d1d5db] bg-white text-[#111827] focus-visible:ring-1 focus-visible:ring-[#2d6cdf]"
+                value={values.description}
+                onChange={(e) =>
+                  setValues((prev) => ({
+                    ...prev,
                     description: e.target.value,
-                  });
-                }}
+                  }))
+                }
               />
-            </label>
-          </div>
+            </div>
 
-          <div className="flex w-full flex-col gap-2.5">
-            <label className="text-normal flex flex-col text-base leading-[22px] text-sky-2">
-              Select Date and Time
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-[#4b5563]">
+                  Start Date & Time
+                </label>
+                <div className="mt-1.5">
+                  <ReactDatePicker
+                    selected={values.dateTime}
+                    onChange={(date) => {
+                      if (date) {
+                        setValues((prev) => ({
+                          ...prev,
+                          dateTime: date,
+                        }));
+                      }
+                    }}
+                    showTimeSelect
+                    timeFormat="HH:mm"
+                    timeIntervals={15}
+                    timeCaption="Time"
+                    dateFormat="MMM d, yyyy h:mm aa"
+                    className="w-full rounded-md border border-[#d1d5db] bg-white px-3 py-2 text-sm text-[#111827] focus:outline-none focus:ring-1 focus:ring-[#2d6cdf]"
+                  />
+                </div>
+              </div>
 
-              <ReactDatePicker
-                selected={values.dateTime}
-                onChange={(date) => {
-                  setValues({
-                    ...values,
-                    dateTime: date!,
-                  });
-                }}
-                showTimeSelect
-                timeFormat="HH:mm"
-                timeIntervals={15}
-                timeCaption="time"
-                dateFormat="MMMM d, yyyy h:mm aa"
-                className="mt-2 w-full rounded bg-dark-3 p-2"
-              />
-            </label>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-[#4b5563]">
+                  Duration
+                </label>
+                <select
+                  value={values.durationMinutes}
+                  onChange={(e) =>
+                    setValues((prev) => ({
+                      ...prev,
+                      durationMinutes: Number(e.target.value),
+                    }))
+                  }
+                  className="mt-1.5 w-full rounded-md border border-[#d1d5db] bg-white px-3 py-2 text-sm text-[#111827] focus:outline-none focus:ring-1 focus:ring-[#2d6cdf]"
+                >
+                  <option value={15}>15 minutes</option>
+                  <option value={30}>30 minutes</option>
+                  <option value={45}>45 minutes</option>
+                  <option value={60}>1 hour</option>
+                  <option value={90}>1.5 hours</option>
+                  <option value={120}>2 hours</option>
+                </select>
+              </div>
+            </div>
           </div>
         </MeetingModal>
       ) : (
         <MeetingModal
           isOpen={meetingState === "isScheduleMeeting"}
           onClose={closeMeetingModal}
-          title="Meeting created"
-          className="text-center"
-          buttonText="Copy meeting link"
+          title="Meeting Scheduled"
+          buttonText="Copy Meeting Link"
           handleClick={() => {
             navigator.clipboard.writeText(meetingLink);
-
             toast({
-              title: "Link copied.",
+              title: "Meeting link copied to clipboard",
+              description: meetingLink,
             });
           }}
-          image="/icons/checked.svg"
-          buttonIcon="/icons/copy.svg"
           isLoading={isLoading}
-        />
+        >
+          <div className="flex flex-col gap-4 text-center">
+            <p className="text-sm text-[#5f6675]">
+              Your meeting has been scheduled and added to your upcoming meetings.
+            </p>
+            <div className="flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-[#f8fafc] p-3 text-left">
+              <span className="truncate font-mono text-xs text-[#26344d]">
+                {meetingLink}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => router.push(meetingLink)}
+                className="w-full rounded-lg bg-[#10b981] py-2.5 text-xs font-semibold text-white transition hover:bg-[#059669]"
+              >
+                Join Now
+              </button>
+            </div>
+          </div>
+        </MeetingModal>
       )}
 
+      {/* Instant Meeting Modal */}
       <MeetingModal
         isOpen={meetingState === "isInstantMeeting"}
         onClose={closeMeetingModal}
-        title="Start an instant meeting"
-        className="text-center"
+        title="Start an Instant Meeting"
         buttonText="Start Meeting"
         handleClick={handleCreateMeeting}
         isLoading={isLoading}
-      />
+      >
+        <p className="text-sm text-[#5f6675]">
+          A new meeting will be created instantly and you will be connected with camera and microphone controls.
+        </p>
+      </MeetingModal>
 
+      {/* Join Meeting Modal */}
       <MeetingModal
         isOpen={meetingState === "isJoiningMeeting"}
         onClose={closeMeetingModal}
-        title="Type the link here"
-        className="text-center"
+        title="Join a Meeting"
         buttonText="Join Meeting"
         handleClick={handleJoinMeeting}
         isLoading={isLoading}
       >
-        <Input
-          placeholder="Meeting link or ID"
-          value={values.link}
-          onChange={(e) => {
-            setValues({
-              ...values,
-              link: e.target.value,
-            });
-          }}
-          className="border-none bg-dark-3"
-        />
+        <div className="flex flex-col gap-4 text-left">
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider text-[#4b5563]">
+              Meeting ID or Invite Link
+            </label>
+            <Input
+              placeholder="e.g. 842-192-3841 or https://..."
+              value={values.link}
+              onChange={(e) => {
+                setValues((prev) => ({
+                  ...prev,
+                  link: e.target.value,
+                }));
+              }}
+              className="mt-1.5 border border-[#d1d5db] bg-white text-[#111827] focus-visible:ring-1 focus-visible:ring-[#2d6cdf]"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider text-[#4b5563]">
+              Your Display Name
+            </label>
+            <Input
+              placeholder="Enter your name"
+              value={values.displayName}
+              onChange={(e) => {
+                setValues((prev) => ({
+                  ...prev,
+                  displayName: e.target.value,
+                }));
+              }}
+              className="mt-1.5 border border-[#d1d5db] bg-white text-[#111827] focus-visible:ring-1 focus-visible:ring-[#2d6cdf]"
+            />
+            <p className="mt-1 text-[11px] text-[#6b7280]">
+              This name will be visible to everyone in the meeting.
+            </p>
+          </div>
+        </div>
       </MeetingModal>
     </>
   );

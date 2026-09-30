@@ -94,9 +94,11 @@ export async function apiRequest<T>(
       }
       if (clerk?.user?.id) {
         customHeaders["X-User-Id"] = clerk.user.id;
+      } else {
+        customHeaders["X-User-Id"] = "user_zoom_default";
       }
     } catch {
-      // Ignore token acquisition errors in client
+      customHeaders["X-User-Id"] = "user_zoom_default";
     }
   }
 
