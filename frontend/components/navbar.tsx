@@ -1,65 +1,45 @@
-import {
-  SignedIn,
-  SignedOut,
-  SignInButton,
-  SignUpButton,
-  UserButton,
-} from "@clerk/nextjs";
-import Image from "next/image";
-import Link from "next/link";
+"use client";
 
-import { links } from "@/config";
+import { UserButton } from "@clerk/nextjs";
+import Link from "next/link";
 
 import { MobileNav } from "./mobile-nav";
 
 export const Navbar = () => {
   return (
-    <nav className="flex-between fixed z-50 w-full bg-dark-1 px-6 py-4 lg:px-10">
-      <Link href="/" className="flex items-center gap-1">
-        <Image
-          src="/icons/logo.svg"
-          alt="Yoom logo"
-          width={32}
-          height={32}
-          className="max-sm:size-10"
-        />
-
-        <p className="text-[26px] font-extrabold text-white max-sm:hidden">
-          Yoom
-        </p>
-      </Link>
-
-      <div className="flex-between gap-5">
-        <SignedIn>
-          <UserButton afterSignOutUrl="/sign-in" />
-        </SignedIn>
-
-        <SignedOut>
-          <div className="flex items-center gap-3">
-            <SignInButton mode="modal">
-              <button className="rounded-lg bg-dark-3 px-4 py-2 text-sm font-semibold text-white hover:bg-[#252A41]">
-                Sign In
-              </button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <button className="rounded-lg bg-blue-1 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600">
-                Sign Up
-              </button>
-            </SignUpButton>
-          </div>
-        </SignedOut>
-
-        <Link
-          href={links.sourceCode}
-          target="_blank"
-          rel="noreferrer noopener"
-          title="Source Code"
-        >
-          <Image src="/icons/github.svg" alt="GitHub" height={80} width={80} />
+    <header className="fixed left-0 top-0 z-50 w-full bg-white">
+      <div className="flex h-[65px] items-center justify-between border-b border-[#e5e7eb] px-6">
+        <Link href="/" className="flex items-center">
+          <span className="text-[36px] font-semibold tracking-[-2.5px] text-[#2d6cdf]">
+            zoom
+          </span>
         </Link>
 
-        <MobileNav />
+        <div className="flex items-center gap-5">
+          <Link
+            href="/"
+            className="hidden text-[15px] font-medium text-[#5d6275] hover:text-[#2d6cdf] lg:block"
+          >
+            Home
+          </Link>
+
+          <div className="hidden lg:block">
+            <UserButton
+              appearance={{
+                elements: {
+                  userButtonAvatarBox: "h-8 w-8 rounded-[9px]",
+                  userButtonAvatar: "h-8 w-8 rounded-[9px]",
+                },
+              }}
+            />
+          </div>
+
+          <div className="flex items-center gap-3 lg:hidden">
+            <UserButton />
+            <MobileNav />
+          </div>
+        </div>
       </div>
-    </nav>
+    </header>
   );
 };

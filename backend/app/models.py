@@ -92,17 +92,37 @@ class MeetingParticipant(Base, TimestampMixin):
 class MeetingInvitation(Base, TimestampMixin):
     __tablename__ = "meeting_invitations"
     __table_args__ = (
-        Index("ix_meeting_invitations_meeting_id", "meeting_id"),
         Index("ix_meeting_invitations_invitee_user_id", "invitee_user_id"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
-    meeting_id: Mapped[str] = mapped_column(ForeignKey("meetings.id", ondelete="CASCADE"), nullable=False, index=True)
-    inviter_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    invitee_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    invitee_email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
-    status: Mapped[InvitationStatus] = mapped_column(Enum(InvitationStatus), default=InvitationStatus.PENDING, nullable=False)
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    meeting_id: Mapped[str] = mapped_column(
+        ForeignKey("meetings.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    inviter_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    invitee_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    invitee_email: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        index=True,
+    )
+    status: Mapped[InvitationStatus] = mapped_column(
+        Enum(InvitationStatus),
+        default=InvitationStatus.PENDING,
+        nullable=False,
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
     meeting: Mapped[Meeting] = relationship(back_populates="invitations")
 

@@ -5,13 +5,13 @@ import { Sidebar } from "@/components/sidebar";
 
 const HomeLayout = ({ children }: PropsWithChildren) => {
   return (
-    <main>
+    <main className="min-h-screen bg-white">
       <Navbar />
 
-      <div className="flex">
+      <div className="flex pt-[65px]">
         <Sidebar />
 
-        <section className="flex min-h-screen flex-1 flex-col px-6 pb-6 pt-28 max-md:pb-14 sm:px-14">
+        <section className="min-h-[calc(100vh-65px)] flex-1 bg-white">
           <div className="w-full">{children}</div>
         </section>
       </div>
